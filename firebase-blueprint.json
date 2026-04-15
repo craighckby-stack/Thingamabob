@@ -1,0 +1,24 @@
+{
+  "entities": {
+    "Deployment": {
+      "title": "Deployment",
+      "description": "A record of a repository audit and build test.",
+      "type": "object",
+      "properties": {
+        "repoName": { "type": "string", "description": "Name of the GitHub repository." },
+        "status": { "type": "string", "enum": ["PASS", "FAIL"], "description": "Build status." },
+        "maturity": { "type": "string", "description": "System maturity level." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the audit occurred." },
+        "summary": { "type": "string", "description": "One-sentence summary of the audit." },
+        "uiUrl": { "type": "string", "description": "Base64 or URL of the generated UI preview." }
+      },
+      "required": ["repoName", "status", "timestamp"]
+    }
+  },
+  "firestore": {
+    "artifacts/{appId}/users/{userId}/deployments/{deploymentId}": {
+      "schema": "Deployment",
+      "description": "User-specific repository audit history."
+    }
+  }
+}
