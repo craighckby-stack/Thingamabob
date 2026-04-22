@@ -1,100 +1,73 @@
-Unique Working Code Chunks: Thingamabob
-This document extracts the specific, non-generic functional code chunks from the repository.
+# Repository Architectural Manifest: CHUNK-1
 
-1. Automated Repository Logic Extraction & AI Auditing
-File: src/App.tsx Function: Part of auditWithBuildTest
+> **Distillation Status**: AUTO-GENERATED
+> **Analysis Scope**: 15 unique logic files across multiple branches.
 
-What it does: This chunk recursively maps a GitHub repository's tree, filters for logic-heavy files, fetches their content, and cleans them to build a dense context for AI analysis.
+### Contextual Repository Tree Flattening
+**File:** src/App.tsx
 
-const treeRes = await ghFetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/git/trees/${repo.default_branch}?recursive=1`);
-const treeData = await treeRes.json();
-const allFiles = treeData.tree || [];
-const logicFiles = allFiles.filter((f: any) => f.type === 'blob' && f.path.match(/\.(js|ts|jsx|tsx|py|go|json|yml|txt|md)$/)).sort((a: any, b: any) => b.size - a.size).slice(0, 15);
- 
-let context = `FILES:\n${allFiles.map((f: any) => f.path).slice(0, 50).join('\n')}\n\nCODE:`;
-for (let f of logicFiles) {
-  const fRes = await ghFetch(f.url);
-  const fData = await fRes.json();
-  const cleanContent = (fData.content || '').replace(/\s/g, '');
-  context += `\n\n### ${f.path}\n${atob(cleanContent).substring(0, 3000)}\n---`;
-}
+> Implements a recursive tree mapping and heuristic filtering algorithm to synthesize a high-density context window for LLM analysis, ensuring critical logic files are prioritized within token limitations.
 
-2. AI-Driven README Evolution & Automated Commit
-File: src/App.tsx Function: Part of auditWithBuildTest
+```typescript
+const treeRes = await ghFetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/git/trees/${repo.default_branch}?recursive=1`); const treeData = await treeRes.json(); const allFiles = treeData.tree || []; const logicFiles = allFiles.filter((f: any) => f.type === 'blob' && f.path.match(/\.(js|ts|jsx|tsx|py|go|json|yml|txt|md)$/)).sort((a: any, b: any) => b.size - a.size).slice(0, 15); let context = `FILES:\n${allFiles.map((f: any) => f.path).slice(0, 50).join('\n')}\n\nCODE:`; for (let f of logicFiles) { const fRes = await ghFetch(f.url); const fData = await fRes.json(); const cleanContent = (fData.content || '').replace(/\s/g, ''); context += `\n\n### ${f.path}\n${atob(cleanContent).substring(0, 3000)}\n---`; }
+```
 
-What it does: Uses AI-generated insights to dynamically update a repository's README.md. It handles the SHA-based update flow required by the GitHub API.
+---
+### Stateful GitHub Content Synchronization
+**File:** src/App.tsx
 
-const fileStatus = await fetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/contents/README.md?ref=${repo.default_branch}`, { 
-  headers: { 'Authorization': `token ${ghToken}` } 
-});
-const sha = fileStatus.ok ? (await fileStatus.json()).sha : null;
- 
-await ghFetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/contents/README.md`, {
-  method: 'PUT',
-  body: JSON.stringify({ 
-    message: 'docs: visual build audit by Balanced Auditor', 
-    content: btoa(unescape(encodeURIComponent(finalReadme))), 
-    sha, 
-    branch: repo.default_branch 
-  })
-});
+> Enforces idempotent remote file updates by implementing a check-then-push pattern that resolves SHA-based version headers to prevent write conflicts during AI-driven documentation evolution.
 
-3. Global Code Search Scoping
-File: src/App.tsx Function: performGlobalSearch
+```typescript
+const fileStatus = await fetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/contents/README.md?ref=${repo.default_branch}`, { headers: { 'Authorization': `token ${ghToken}` } }); const sha = fileStatus.ok ? (await fileStatus.json()).sha : null; await ghFetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/contents/README.md`, { method: 'PUT', body: JSON.stringify({ message: 'docs: visual build audit by Balanced Auditor', content: btoa(unescape(encodeURIComponent(finalReadme))), sha, branch: repo.default_branch }) });
+```
 
-What it does: Programmatically determines the target scope for a GitHub code search, defaulting to the authenticated user if no target is provided.
+---
+### Diagnostic Firestore Telemetry
+**File:** src/App.tsx
 
-let username = targetUser;
-if (!username) {
-  const userRes = await ghFetch('https://api.github.com/user');
-  const userData = await userRes.json();
-  username = userData.login;
-}
- 
-const res = await ghFetch(`https://api.github.com/search/code?q=user:${username}+${globalSearchQuery}`);
-const data = await res.json();
+> Provides a unified error handling wrapper that captures operation-specific metadata and authentication context, enabling granular architectural observability and faster debugging of persistence failures.
 
-4. Custom Firestore Security Validation
-File: firestore.rules
+```typescript
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) { const errInfo: FirestoreErrorInfo = { error: error instanceof Error ? error.message : String(error), authInfo: { userId: auth.currentUser?.uid, email: auth.currentUser?.email }, operationType, path }; console.error('Firestore Error: ', JSON.stringify(errInfo)); throw new Error(JSON.stringify(errInfo)); }
+```
 
-What it does: Implements a strict, custom validation logic for "Deployment" documents, ensuring data integrity beyond simple type checking.
+---
+### Atomic Deployment Schema Validation
+**File:** firestore.rules
 
-function isValidDeployment(data) {
-  return data.repoName is string && 
-         data.repoName.size() > 0 &&
-         data.status in ['PASS', 'FAIL'] &&
-         data.timestamp is timestamp &&
-         (!('maturity' in data) || data.maturity is string) &&
-         (!('summary' in data) || data.summary is string) &&
-         (!('uiUrl' in data) || (data.uiUrl is string && data.uiUrl.size() < 2000));
-}
+> Implements server-side business logic enforcement at the database layer, ensuring that audit artifacts maintain structural integrity and adhere to predefined domain constraints beyond simple type checking.
 
-5. Robust API Error Recovery Wrapper
-File: src/App.tsx Function: ghFetch
+```typescript
+function isValidDeployment(data) { return data.repoName is string && data.repoName.size() > 0 && data.status in ['PASS', 'FAIL'] && data.timestamp is timestamp && (!('maturity' in data) || data.maturity is string) && (!('summary' in data) || data.summary is string) && (!('uiUrl' in data) || (data.uiUrl is string && data.uiUrl.size() < 2000)); }
+```
 
-What it does: A specialized fetch wrapper that intercepts network failures and API error responses to provide actionable diagnostic information.
+---
+### Robust GitHub API Interceptor
+**File:** src/App.tsx
 
-const ghFetch = async (url: string, options: RequestInit = {}) => {
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Authorization': `token ${ghToken}`,
-        'Accept': 'application/vnd.github.v3+json',
-        ...options.headers,
-      },
-    });
- 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(`GitHub API Error [${response.status}]: ${errorData.message}`);
-    }
- 
-    return response;
-  } catch (e) {
-    if (e instanceof Error && e.message.includes('Failed to fetch')) {
-      throw new Error("Network Error: Failed to connect to GitHub. Check your internet connection or GitHub Token permissions.");
-    }
-    throw e;
-  }
-};
+> Centralizes authorization logic and error interception for external service interactions, translating raw HTTP failures into actionable application-level diagnostics while managing mandatory API headers.
+
+```typescript
+const ghFetch = async (url: string, options: RequestInit = {}) => { try { const response = await fetch(url, { ...options, headers: { 'Authorization': `token ${ghToken}`, 'Accept': 'application/vnd.github.v3+json', ...options.headers } }); if (!response.ok) { const errorData = await response.json().catch(() => ({ message: response.statusText })); throw new Error(`GitHub API Error [${response.status}]: ${errorData.message}`); } return response; } catch (e) { if (e instanceof Error && e.message.includes('Failed to fetch')) { throw new Error('Network Error: Failed to connect to GitHub.'); } throw e; } }
+```
+
+---
+### Hierarchical Persistence Blueprint
+**File:** firebase-blueprint.json
+
+> Architects a multi-tenant data structure that isolates audit artifacts by user and application ID, facilitating efficient querying and secure hierarchical access within the Firestore document model.
+
+```typescript
+ "firestore": { "artifacts/{appId}/users/{userId}/deployments/{deploymentId}": { "schema": "Deployment", "description": "User-specific repository audit history." } }
+```
+
+---
+### Runtime Environment Key Injection
+**File:** vite.config.ts
+
+> Orchestrates the secure propagation of sensitive provider credentials from the build environment to the client runtime, enabling dynamic AI capabilities without exposing secrets in source control.
+
+```typescript
+export default defineConfig(({mode}) => { const env = loadEnv(mode, '.', ''); return { plugins: [react(), tailwindcss()], define: { 'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY) }, resolve: { alias: { '@': path.resolve(__dirname, '.') } } }; });
+```
