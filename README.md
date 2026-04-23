@@ -1,73 +1,70 @@
 # Repository Architectural Manifest: CHUNK-1
 
 > **Distillation Status**: AUTO-GENERATED
-> **Analysis Scope**: 15 unique logic files across multiple branches.
+> **Engine Specification**: DALEK_CAAN_SIPHON_ENGINE_V3.2
+> **Identity Guard**: DEFAULT
+> **License Notice**: NOT FOR COMMERCIAL USE WITHOUT PURCHASE. Contact administrator for commercial licensing options.
+> **Analysis Scope**: 13 unique logic files across multiple branches.
 
 ### Contextual Repository Tree Flattening
 **File:** src/App.tsx
 
-> Implements a recursive tree mapping and heuristic filtering algorithm to synthesize a high-density context window for LLM analysis, ensuring critical logic files are prioritized within token limitations.
+> This logic recursively maps a repository's structure and synthesizes a high-density context window by selecting and cleaning relevant source files for AI processing.
+
+**Alignment**: 95%
+**Philosophy Check**: Discernment of relevant data is the first step toward actionable wisdom; size is used here as a proxy for complexity.
+
+#### Strategic Mutation
+* Implement a parallelized fetch using Promise.all with a semaphore to respect GitHub rate limits while reducing total context synthesis time.
 
 ```typescript
 const treeRes = await ghFetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/git/trees/${repo.default_branch}?recursive=1`); const treeData = await treeRes.json(); const allFiles = treeData.tree || []; const logicFiles = allFiles.filter((f: any) => f.type === 'blob' && f.path.match(/\.(js|ts|jsx|tsx|py|go|json|yml|txt|md)$/)).sort((a: any, b: any) => b.size - a.size).slice(0, 15); let context = `FILES:\n${allFiles.map((f: any) => f.path).slice(0, 50).join('\n')}\n\nCODE:`; for (let f of logicFiles) { const fRes = await ghFetch(f.url); const fData = await fRes.json(); const cleanContent = (fData.content || '').replace(/\s/g, ''); context += `\n\n### ${f.path}\n${atob(cleanContent).substring(0, 3000)}\n---`; }
 ```
 
 ---
-### Stateful GitHub Content Synchronization
+### Idempotent GitHub Content Synchronization
 **File:** src/App.tsx
 
-> Enforces idempotent remote file updates by implementing a check-then-push pattern that resolves SHA-based version headers to prevent write conflicts during AI-driven documentation evolution.
+> Handles the SHA-based update pattern required by GitHub to prevent write-conflicts when updating existing files.
+
+**Alignment**: 90%
+**Philosophy Check**: Stability in state management ensures that every change is intentional and historically grounded.
+
+#### Strategic Mutation
+* Integrate a local 'shadow' state to perform a diff-check before the PUT request, avoiding unnecessary commits if the AI-generated README has not changed.
 
 ```typescript
 const fileStatus = await fetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/contents/README.md?ref=${repo.default_branch}`, { headers: { 'Authorization': `token ${ghToken}` } }); const sha = fileStatus.ok ? (await fileStatus.json()).sha : null; await ghFetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/contents/README.md`, { method: 'PUT', body: JSON.stringify({ message: 'docs: visual build audit by Balanced Auditor', content: btoa(unescape(encodeURIComponent(finalReadme))), sha, branch: repo.default_branch }) });
 ```
 
 ---
-### Diagnostic Firestore Telemetry
+### Diagnostic Firestore Telemetry Wrapper
 **File:** src/App.tsx
 
-> Provides a unified error handling wrapper that captures operation-specific metadata and authentication context, enabling granular architectural observability and faster debugging of persistence failures.
+> A centralized error handler that enriches persistence failures with authentication and operation-specific metadata for deep debugging.
+
+**Alignment**: 85%
+**Philosophy Check**: A system's maturity is measured by its ability to describe its own failures with precision.
+
+#### Strategic Mutation
+* Extend the handler to push these error objects into a dedicated 'system_telemetry' collection for real-time architectural monitoring.
 
 ```typescript
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) { const errInfo: FirestoreErrorInfo = { error: error instanceof Error ? error.message : String(error), authInfo: { userId: auth.currentUser?.uid, email: auth.currentUser?.email }, operationType, path }; console.error('Firestore Error: ', JSON.stringify(errInfo)); throw new Error(JSON.stringify(errInfo)); }
 ```
 
 ---
-### Atomic Deployment Schema Validation
-**File:** firestore.rules
-
-> Implements server-side business logic enforcement at the database layer, ensuring that audit artifacts maintain structural integrity and adhere to predefined domain constraints beyond simple type checking.
-
-```typescript
-function isValidDeployment(data) { return data.repoName is string && data.repoName.size() > 0 && data.status in ['PASS', 'FAIL'] && data.timestamp is timestamp && (!('maturity' in data) || data.maturity is string) && (!('summary' in data) || data.summary is string) && (!('uiUrl' in data) || (data.uiUrl is string && data.uiUrl.size() < 2000)); }
-```
-
----
-### Robust GitHub API Interceptor
+### Dynamic Global Search Scoping
 **File:** src/App.tsx
 
-> Centralizes authorization logic and error interception for external service interactions, translating raw HTTP failures into actionable application-level diagnostics while managing mandatory API headers.
+> Resolves the search scope by defaulting to the authenticated user's identity if no specific target is provided, ensuring fluid context switching.
+
+**Alignment**: 88%
+**Philosophy Check**: Identity is the fundamental anchor from which all exploration begins.
+
+#### Strategic Mutation
+* Cache the resolved username in sessionStorage to minimize redundant API calls for user identity during a single session.
 
 ```typescript
-const ghFetch = async (url: string, options: RequestInit = {}) => { try { const response = await fetch(url, { ...options, headers: { 'Authorization': `token ${ghToken}`, 'Accept': 'application/vnd.github.v3+json', ...options.headers } }); if (!response.ok) { const errorData = await response.json().catch(() => ({ message: response.statusText })); throw new Error(`GitHub API Error [${response.status}]: ${errorData.message}`); } return response; } catch (e) { if (e instanceof Error && e.message.includes('Failed to fetch')) { throw new Error('Network Error: Failed to connect to GitHub.'); } throw e; } }
-```
-
----
-### Hierarchical Persistence Blueprint
-**File:** firebase-blueprint.json
-
-> Architects a multi-tenant data structure that isolates audit artifacts by user and application ID, facilitating efficient querying and secure hierarchical access within the Firestore document model.
-
-```typescript
- "firestore": { "artifacts/{appId}/users/{userId}/deployments/{deploymentId}": { "schema": "Deployment", "description": "User-specific repository audit history." } }
-```
-
----
-### Runtime Environment Key Injection
-**File:** vite.config.ts
-
-> Orchestrates the secure propagation of sensitive provider credentials from the build environment to the client runtime, enabling dynamic AI capabilities without exposing secrets in source control.
-
-```typescript
-export default defineConfig(({mode}) => { const env = loadEnv(mode, '.', ''); return { plugins: [react(), tailwindcss()], define: { 'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY) }, resolve: { alias: { '@': path.resolve(__dirname, '.') } } }; });
+let username = targetUser; if (!username) { const userRes = await ghFetch('https://api.github.com/user'); const userData = await userRes.json(); username = userData.login; } const res = await ghFetch(`https://api.github.com/search/code?q=user:${username}+${globalSearchQuery}`);
 ```
